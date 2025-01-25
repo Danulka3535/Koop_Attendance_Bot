@@ -1,16 +1,18 @@
-
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties  # Импортируем DefaultBotProperties
+from aiogram.enums import ParseMode
+from events import register_events  # Импортируем функцию регистрации событий
+from Menu import register_menu  # Импортируем функцию регистрации меню
 
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
 # Токен вашего бота
-API_TOKEN = 'Your_Token'
+API_TOKEN = '7833684593:AAFS5kf94T15kT9cd9DNmk-__tz4oRu8nBc'
 
 # Инициализация бота с использованием DefaultBotProperties
 bot = Bot(
@@ -18,6 +20,12 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML)  # Указываем parse_mode здесь
 )
 dp = Dispatcher()
+
+# Регистрируем обработчики меню
+register_menu(dp)
+
+# Регистрируем обработчики событий
+register_events(dp)
 
 # Обработчик команды /start
 @dp.message(Command("start"))
