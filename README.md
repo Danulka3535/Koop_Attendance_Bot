@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties  # Импортируе�
 logging.basicConfig(level=logging.INFO)
 
 # Токен вашего бота
-API_TOKEN = '7833684593:AAFS5kf94T15kT9cd9DNmk-__tz4oRu8nBc'
+API_TOKEN = 'YOUR_TOKEN'
 
 # Инициализация бота с использованием DefaultBotProperties
 bot = Bot(
