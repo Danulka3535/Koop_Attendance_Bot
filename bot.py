@@ -13,7 +13,7 @@ from aiogram.exceptions import TelegramBadRequest
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "YOUT_BOT_TOKEN"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -42,30 +42,36 @@ async def process_recipient(message: Message, state: FSMContext):
     recipient_username = message.text.strip().lstrip("@")
     
     # Проверка формата username
-    if not recipient_username.isalnum() or len(recipient_username) < 5:
+    if not recipient_username.replace("_", "").isalnum() or len(recipient_username) < 5:
         await message.answer("❌ Некорректный формат username. Пример: @username")
         return
-
+    
     try:
         # Пытаемся получить информацию о пользователе
         chat = await bot.get_chat(f"@{recipient_username}")
+        
         if chat.type != "private":
             await message.answer("❌ Это не личный аккаунт. Введите username пользователя.")
             return
-            
+        
         recipient_id = chat.id
-    except TelegramBadRequest as e:
-        logging.error(f"Ошибка поиска пользователя: {e}")
-        await message.answer("❌ Пользователь не найден или аккаунт приватный. Убедитесь, что:")
-        await message.answer("1. Username введен правильно (например, @username)")
-        await message.answer("2. Пользователь не скрыл username в настройках приватности")
-        return
     except Exception as e:
-        logging.error(f"Неизвестная ошибка: {e}")
-        await message.answer("🚫 Произошла непредвиденная ошибка. Попробуйте позже.")
+        logging.error(f"Ошибка поиска пользователя: {e}")
+        
+        # Определяем конкретную причину ошибки
+        error_message = (
+            "❌ Пользователь не найден или аккаунт приватный. Убедитесь, что:\n"
+            "1. Username введен правильно (например, @username)\n"
+            "2. Пользователь не скрыл username в настройках приватности\n"
+            "3. Бот уже общался с этим пользователем в личных сообщениях."
+        )
+        await message.answer(error_message)
         return
-
+    
+    # Сохраняем ID получателя в состояние
     await state.update_data(recipient_id=recipient_id)
+    
+    # Подтверждение выбора получателя
     await message.answer(
         f"✅ Вы выбрали: @{recipient_username}\nПодтвердите отправку данных:",
         reply_markup=create_keyboard(["Подтвердить", "Отменить"])
