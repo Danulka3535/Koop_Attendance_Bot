@@ -13,20 +13,16 @@ from aiogram.exceptions import TelegramBadRequest
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-# Вставьте сюда ваш API Key (токен бота)
-BOT_TOKEN = "YOUT_BOT_TOKEN"
+BOT_TOKEN = "7833684593:AAFS5kf94T15kT9cd9DNmk-__tz4oRu8nBc"
 
-# Инициализация бота и диспетчера
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# FSM States
 class Form(StatesGroup):
     waiting_for_recipient = State()
     waiting_for_confirmation = State()
     waiting_for_student_name = State()
 
-# Utility function to create a keyboard
 def create_keyboard(buttons):
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=button)] for button in buttons],
@@ -34,35 +30,49 @@ def create_keyboard(buttons):
         one_time_keyboard=True
     )
 
-# Start command handler
 @dp.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
-    await state.clear()  # Clear any existing state
+    await state.clear()
     await message.answer("Привет! Давайте начнем учет посещаемости.\nКому вы пытаетесь отправить эти данные?")
     await state.set_state(Form.waiting_for_recipient)
 
-# Recipient username handler
+# ОБНОВЛЕННЫЙ БЛОК НАЧИНАЕТСЯ ЗДЕСЬ
 @dp.message(Form.waiting_for_recipient)
 async def process_recipient(message: Message, state: FSMContext):
     recipient_username = message.text.strip().lstrip("@")
-    if not recipient_username:
-        await message.answer("Пожалуйста, укажите корректный username получателя.")
+    
+    # Проверка формата username
+    if not recipient_username.isalnum() or len(recipient_username) < 5:
+        await message.answer("❌ Некорректный формат username. Пример: @username")
         return
 
     try:
-        recipient_id = (await bot.get_chat(f"@{recipient_username}")).id
-    except TelegramBadRequest:
-        await message.answer("Не удалось найти пользователя. Попробуйте снова.")
+        # Пытаемся получить информацию о пользователе
+        chat = await bot.get_chat(f"@{recipient_username}")
+        if chat.type != "private":
+            await message.answer("❌ Это не личный аккаунт. Введите username пользователя.")
+            return
+            
+        recipient_id = chat.id
+    except TelegramBadRequest as e:
+        logging.error(f"Ошибка поиска пользователя: {e}")
+        await message.answer("❌ Пользователь не найден или аккаунт приватный. Убедитесь, что:")
+        await message.answer("1. Username введен правильно (например, @username)")
+        await message.answer("2. Пользователь не скрыл username в настройках приватности")
+        return
+    except Exception as e:
+        logging.error(f"Неизвестная ошибка: {e}")
+        await message.answer("🚫 Произошла непредвиденная ошибка. Попробуйте позже.")
         return
 
     await state.update_data(recipient_id=recipient_id)
     await message.answer(
-        f"Вы хотите отправить данные пользователю @{recipient_username}. Подтвердите действие.",
+        f"✅ Вы выбрали: @{recipient_username}\nПодтвердите отправку данных:",
         reply_markup=create_keyboard(["Подтвердить", "Отменить"])
     )
     await state.set_state(Form.waiting_for_confirmation)
+# ОБНОВЛЕННЫЙ БЛОК ЗАКАНЧИВАЕТСЯ ЗДЕСЬ
 
-# Confirmation handler
 @dp.message(Form.waiting_for_confirmation, F.text.in_(["Подтвердить", "Отменить"]))
 async def confirm_action(message: Message, state: FSMContext):
     if message.text == "Отменить":
@@ -85,7 +95,6 @@ async def confirm_action(message: Message, state: FSMContext):
     await state.update_data(sender_id=message.from_user.id)
     await state.set_state(Form.waiting_for_student_name)
 
-# Recipient response handler
 @dp.message(F.text.in_(["Принять", "Отклонить"]))
 async def recipient_response(message: Message, state: FSMContext):
     if message.text == "Отклонить":
@@ -104,7 +113,6 @@ async def recipient_response(message: Message, state: FSMContext):
         await bot.send_message(sender_id, "Получатель принял ваш запрос. Можете начинать вводить данные.", reply_markup=ReplyKeyboardRemove())
         await state.set_state(Form.waiting_for_student_name)
 
-# Student name handler
 @dp.message(Form.waiting_for_student_name)
 async def process_student_name(message: Message, state: FSMContext):
     student_name = message.text.strip()
@@ -122,7 +130,6 @@ async def process_student_name(message: Message, state: FSMContext):
         reply_markup=create_keyboard(["Добавить", "Завершить"])
     )
 
-# Finish input handler
 @dp.message(Form.waiting_for_student_name, F.text.in_(["Добавить", "Завершить"]))
 async def finish_input(message: Message, state: FSMContext):
     if message.text == "Добавить":
