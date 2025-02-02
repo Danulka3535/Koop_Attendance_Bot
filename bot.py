@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 load_dotenv()
+
 import os
 import logging
 from aiogram import Bot, Dispatcher, F
@@ -13,7 +14,11 @@ from aiogram.exceptions import TelegramBadRequest
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+# Загрузка токена из переменной окружения
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN не найден! Проверьте .env файл.")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -36,7 +41,6 @@ async def cmd_start(message: Message, state: FSMContext):
     await message.answer("Привет! Давайте начнем учет посещаемости.\nКому вы пытаетесь отправить эти данные?")
     await state.set_state(Form.waiting_for_recipient)
 
-# ОБНОВЛЕННЫЙ БЛОК НАЧИНАЕТСЯ ЗДЕСЬ
 @dp.message(Form.waiting_for_recipient)
 async def process_recipient(message: Message, state: FSMContext):
     recipient_username = message.text.strip().lstrip("@")
@@ -58,7 +62,6 @@ async def process_recipient(message: Message, state: FSMContext):
     except Exception as e:
         logging.error(f"Ошибка поиска пользователя: {e}")
         
-        # Определяем конкретную причину ошибки
         error_message = (
             "❌ Пользователь не найден или аккаунт приватный. Убедитесь, что:\n"
             "1. Username введен правильно (например, @username)\n"
@@ -77,7 +80,6 @@ async def process_recipient(message: Message, state: FSMContext):
         reply_markup=create_keyboard(["Подтвердить", "Отменить"])
     )
     await state.set_state(Form.waiting_for_confirmation)
-# ОБНОВЛЕННЫЙ БЛОК ЗАКАНЧИВАЕТСЯ ЗДЕСЬ
 
 @dp.message(Form.waiting_for_confirmation, F.text.in_(["Подтвердить", "Отменить"]))
 async def confirm_action(message: Message, state: FSMContext):
@@ -85,19 +87,25 @@ async def confirm_action(message: Message, state: FSMContext):
         await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
-
+    
     data = await state.get_data()
     recipient_id = data.get("recipient_id")
     if not recipient_id:
         await message.answer("Ошибка: не найден получатель.")
         await state.clear()
         return
-
-    await bot.send_message(
-        recipient_id,
-        "Вам хотят отправить данные по учету посещаемости. Принимаете?",
-        reply_markup=create_keyboard(["Принять", "Отклонить"])
-    )
+    
+    try:
+        await bot.send_message(
+            recipient_id,
+            "Вам хотят отправить данные по учету посещаемости. Принимаете?",
+            reply_markup=create_keyboard(["Принять", "Отклонить"])
+        )
+    except TelegramBadRequest:
+        await message.answer("❌ Не удалось связаться с получателем. Возможно, он заблокировал бота.")
+        await state.clear()
+        return
+    
     await state.update_data(sender_id=message.from_user.id)
     await state.set_state(Form.waiting_for_student_name)
 
@@ -107,30 +115,39 @@ async def recipient_response(message: Message, state: FSMContext):
         sender_data = await state.get_data()
         sender_id = sender_data.get("sender_id")
         if sender_id:
-            await bot.send_message(sender_id, "Получатель отклонил ваш запрос.", reply_markup=ReplyKeyboardRemove())
+            try:
+                await bot.send_message(sender_id, "Получатель отклонил ваш запрос.", reply_markup=ReplyKeyboardRemove())
+            except TelegramBadRequest:
+                pass
         await message.answer("Вы отклонили запрос.", reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
-
+    
     await message.answer("Вы приняли запрос. Ожидайте данные.", reply_markup=ReplyKeyboardRemove())
     sender_data = await state.get_data()
     sender_id = sender_data.get("sender_id")
     if sender_id:
-        await bot.send_message(sender_id, "Получатель принял ваш запрос. Можете начинать вводить данные.", reply_markup=ReplyKeyboardRemove())
+        try:
+            await bot.send_message(sender_id, "Получатель принял ваш запрос. Можете начинать вводить данные.", reply_markup=ReplyKeyboardRemove())
+        except TelegramBadRequest:
+            pass
         await state.set_state(Form.waiting_for_student_name)
 
 @dp.message(Form.waiting_for_student_name)
 async def process_student_name(message: Message, state: FSMContext):
+    if message.text in ["Завершить", "Добавить"]:
+        return
+    
     student_name = message.text.strip()
     if not student_name:
         await message.answer("Пожалуйста, введите корректное ФИО.")
         return
-
+    
     data = await state.get_data()
     students = data.get("students", [])
     students.append(student_name)
     await state.update_data(students=students)
-
+    
     await message.answer(
         "Успешно добавлено!\nНужно ли еще кого-то добавить?",
         reply_markup=create_keyboard(["Добавить", "Завершить"])
@@ -141,18 +158,26 @@ async def finish_input(message: Message, state: FSMContext):
     if message.text == "Добавить":
         await message.answer("Введите ФИО следующего ученика:")
         return
-
+    
     data = await state.get_data()
     students = data.get("students", [])
     recipient_id = data.get("recipient_id")
-
+    
     if not students:
         await message.answer("Список учеников пуст. Нечего отправлять.", reply_markup=ReplyKeyboardRemove())
         await state.clear()
         return
-
-    student_list = "\n".join(students)
-    await bot.send_message(recipient_id, f"Список учеников:\n{student_list}")
+    
+    # Формируем список учеников с нумерацией
+    student_list = "\n".join([f"{i+1}. {student}" for i, student in enumerate(students)])
+    
+    try:
+        await bot.send_message(recipient_id, f"Список учеников:\n{student_list}")
+    except TelegramBadRequest:
+        await message.answer("❌ Не удалось отправить данные получателю. Возможно, он заблокировал бота.")
+        await state.clear()
+        return
+    
     await message.answer("Данные успешно отправлены!", reply_markup=ReplyKeyboardRemove())
     await state.clear()
 
