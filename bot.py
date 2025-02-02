@@ -13,7 +13,7 @@ from aiogram.exceptions import TelegramBadRequest
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "7833684593:AAFS5kf94T15kT9cd9DNmk-__tz4oRu8nBc"
+BOT_TOKEN = "YOUT_BOT_TOKEN"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
