@@ -3,9 +3,13 @@ load_dotenv()
 
 import os
 import logging
+import sqlite3
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.filters import Command, CommandObject
+from aiogram.types import (
+    Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
+    InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -23,6 +27,34 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+# Создание базы данных пользователей
+conn = sqlite3.connect("users.db")
+cursor = conn.cursor()
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        username TEXT
+    )
+""")
+conn.commit()
+
+# Регистрация нового пользователя
+def register_user(user_id, username):
+    cursor.execute("INSERT OR IGNORE INTO users (id, username) VALUES (?, ?)", (user_id, username))
+    conn.commit()
+
+# Поиск пользователя по username
+def find_user_by_username(username):
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    result = cursor.fetchone()
+    return result[0] if result else None
+
+# Список заранее зарегистрированных получателей
+REGISTERED_USERS = {
+    "user1": 123456789,  # username: user_id
+    "user2": 987654321,
+}
+
 class Form(StatesGroup):
     waiting_for_recipient = State()
     waiting_for_confirmation = State()
@@ -35,51 +67,142 @@ def create_keyboard(buttons):
         one_time_keyboard=True
     )
 
+async def check_user_exists(username: str) -> tuple[bool, str | None]:
+    """
+    Проверяет, существует ли пользователь с указанным username.
+    
+    :param username: Username пользователя (без @)
+    :return: Кортеж (существует ли пользователь, ID пользователя или None)
+    """
+    try:
+        escaped_username = username.replace("_", "\\_")  # Экранируем специальные символы
+        chat = await bot.get_chat(f"@{escaped_username}")
+        if chat.type == "private":
+            return True, chat.id  # Пользователь найден, возвращаем его ID
+        logging.warning(f"Пользователь @{username} найден, но это не личный чат.")
+        return False, None  # Это не личный аккаунт
+    except Exception as e:
+        if "chat not found" in str(e).lower():
+            logging.error(f"Ошибка при проверке пользователя {username}: Пользователь не найден.")
+            return False, None  # Пользователь не найден
+        logging.error(f"Ошибка при проверке пользователя {username}: {e}")
+        return False, None  # Другая ошибка
+
 @dp.message(Command("start"))
-async def cmd_start(message: Message, state: FSMContext):
+async def cmd_start(message: Message, command: CommandObject, state: FSMContext):
+    args = command.args
+    
+    if args and args.startswith("auth_"):
+        unique_code = args[5:]
+        AUTHORIZED_USERS = {}
+        AUTHORIZED_USERS[message.from_user.id] = message.from_user.username
+        await message.answer("Вы успешно зарегистрировались как получатель данных!")
+        return
+    
+    register_user(message.from_user.id, message.from_user.username)
+    
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f"@{username}", callback_data=f"select:{user_id}")]
+            for username, user_id in REGISTERED_USERS.items()
+        ] + [
+            [InlineKeyboardButton(text="Ввести вручную", callback_data="manual_input")]
+        ]
+    )
+    
     await state.clear()
-    await message.answer("Привет! Давайте начнем учет посещаемости.\nКому вы пытаетесь отправить эти данные?")
+    await message.answer(
+        "Привет! Давайте начнем учет посещаемости.\nВыберите получателя данных или введите вручную:",
+        reply_markup=keyboard
+    )
+
+@dp.callback_query(F.data.startswith("select:"))
+async def select_recipient(callback: CallbackQuery, state: FSMContext):
+    recipient_id = int(callback.data.split(":")[1])
+    if not recipient_id:
+        await callback.answer("Пользователь не найден.")
+        return
+    
+    await state.update_data(recipient_id=recipient_id)
+    await callback.message.edit_text(
+        f"✅ Вы выбрали получателя с ID: {recipient_id}\nПодтвердите отправку данных:",
+        reply_markup=create_keyboard(["Подтвердить", "Отменить"])
+    )
+    await state.set_state(Form.waiting_for_confirmation)
+
+@dp.callback_query(F.data == "manual_input")
+async def manual_input(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Введите username получателя (например, @username):")
     await state.set_state(Form.waiting_for_recipient)
 
 @dp.message(Form.waiting_for_recipient)
 async def process_recipient(message: Message, state: FSMContext):
     recipient_username = message.text.strip().lstrip("@")
     
-    # Проверка формата username
     if not recipient_username.replace("_", "").isalnum() or len(recipient_username) < 5:
         await message.answer("❌ Некорректный формат username. Пример: @username")
         return
     
-    try:
-        # Пытаемся получить информацию о пользователе
-        chat = await bot.get_chat(f"@{recipient_username}")
-        
-        if chat.type != "private":
-            await message.answer("❌ Это не личный аккаунт. Введите username пользователя.")
+    # Проверяем наличие в заранее зарегистрированных пользователях
+    for user_id, username in REGISTERED_USERS.items():
+        if username == recipient_username:
+            await state.update_data(recipient_id=user_id)
+            await message.answer(
+                f"✅ Вы выбрали: @{recipient_username}\nПодтвердите отправку данных:",
+                reply_markup=create_keyboard(["Подтвердить", "Отменить"])
+            )
+            await state.set_state(Form.waiting_for_confirmation)
             return
-        
-        recipient_id = chat.id
-    except Exception as e:
-        logging.error(f"Ошибка поиска пользователя: {e}")
-        
-        error_message = (
-            "❌ Пользователь не найден или аккаунт приватный. Убедитесь, что:\n"
-            "1. Username введен правильно (например, @username)\n"
-            "2. Пользователь не скрыл username в настройках приватности\n"
-            "3. Бот уже общался с этим пользователем в личных сообщениях."
+    
+    # Проверяем в базе данных
+    recipient_id = find_user_by_username(recipient_username)
+    if recipient_id:
+        await state.update_data(recipient_id=recipient_id)
+        await message.answer(
+            f"✅ Вы выбрали: @{recipient_username}\nПодтвердите отправку данных:",
+            reply_markup=create_keyboard(["Подтвердить", "Отменить"])
         )
-        await message.answer(error_message)
+        await state.set_state(Form.waiting_for_confirmation)
         return
     
-    # Сохраняем ID получателя в состояние
-    await state.update_data(recipient_id=recipient_id)
+    # Автоматическое исправление username
+    if "_" in recipient_username or "-" in recipient_username:
+        corrected_username = recipient_username.replace("_", "").replace("-", "")
+        await message.answer(
+            f"⚠️ Username содержит специальные символы. Попробуем найти пользователя без них: @{corrected_username}."
+        )
+        exists, recipient_id = await check_user_exists(corrected_username)
+        if exists:
+            await state.update_data(recipient_id=recipient_id)
+            await message.answer(
+                f"✅ Вы выбрали: @{corrected_username}\nПодтвердите отправку данных:",
+                reply_markup=create_keyboard(["Подтвердить", "Отменить"])
+            )
+            await state.set_state(Form.waiting_for_confirmation)
+            return
     
-    # Подтверждение выбора получателя
+    # Проверяем через API
+    exists, recipient_id = await check_user_exists(recipient_username)
+    if exists:
+        await state.update_data(recipient_id=recipient_id)
+        await message.answer(
+            f"✅ Вы выбрали: @{recipient_username}\nПодтвердите отправку данных:",
+            reply_markup=create_keyboard(["Подтвердить", "Отменить"])
+        )
+        await state.set_state(Form.waiting_for_confirmation)
+        return
+    
+    # Если пользователь не найден
     await message.answer(
-        f"✅ Вы выбрали: @{recipient_username}\nПодтвердите отправку данных:",
-        reply_markup=create_keyboard(["Подтвердить", "Отменить"])
+        "❌ Пользователь не найден или аккаунт приватный.\n"
+        "Убедитесь, что:\n"
+        "1. Username введен правильно (например, @username)\n"
+        "2. Пользователь уже начал диалог с ботом.\n"
+        "3. Пользователь не менял свой username недавно.\n"
+        "4. Если username содержит символы `_` или `-`, попробуйте ввести его без них.\n"
+        "Предложите пользователю перейти по ссылке: https://t.me/your_bot\n"
+        "Если проблема persists, попробуйте позже или выберите другого получателя."
     )
-    await state.set_state(Form.waiting_for_confirmation)
 
 @dp.message(Form.waiting_for_confirmation, F.text.in_(["Подтвердить", "Отменить"]))
 async def confirm_action(message: Message, state: FSMContext):
@@ -168,7 +291,6 @@ async def finish_input(message: Message, state: FSMContext):
         await state.clear()
         return
     
-    # Формируем список учеников с нумерацией
     student_list = "\n".join([f"{i+1}. {student}" for i, student in enumerate(students)])
     
     try:
