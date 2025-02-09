@@ -28,10 +28,13 @@
    ```bash
    git clone https://github.com/ваш-username/AttendanceTrackerBot.git
    cd AttendanceTrackerBot
-**Установите зависимости:**
+2. **Установите зависимости:**
+   ```bash
 Copy
 pip install -r requirements.txt
-**Настройте подключение к MongoDB в database.py:**
+
+4. **Настройте подключение к MongoDB в database.py:**
+   ```bash
 python
 Copy
 mongo_client = MongoClient("mongodb://localhost:27017/")  # Ваш URI
