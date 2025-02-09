@@ -1,6 +1,6 @@
 # KoopAttendanceBot 🤖
 
-###- **Username бота: @GameDigest_Bot**                                 *(тестовое название)*
+### **Username бота: @GameDigest_Bot**                                 *(тестовое название)*
 
 **Бот для учета посещаемости учащихся**  
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
