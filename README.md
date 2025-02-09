@@ -30,11 +30,11 @@
    cd AttendanceTrackerBot
 **Установите зависимости:**
 
-bash
+   ```bash
 Copy
 pip install -r requirements.txt
 Настройте подключение к MongoDB в database.py:
-
+---
 python
 Copy
 mongo_client = MongoClient("mongodb://localhost:27017/")  # Ваш URI
