@@ -13,7 +13,7 @@ from handlers import help_handler
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "7833684593:AAFS5kf94T15kT9cd9DNmk-__tz4oRu8nBc"
+BOT_TOKEN = "Твой_Токен_Дружище"
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
