@@ -28,18 +28,18 @@
    ```bash
    git clone https://github.com/ваш-username/AttendanceTrackerBot.git
    cd AttendanceTrackerBot
-# **Установите зависимости:**
+## **Установите зависимости:**
  
 Copy
 pip install -r requirements.txt
 
- # **Настройте подключение к MongoDB в database.py:**
+## **Настройте подключение к MongoDB в database.py:**
  
 python
 Copy
 mongo_client = MongoClient("mongodb://localhost:27017/")  # Ваш URI
 
-# **Укажите токен бота в config.py:**
+## **Укажите токен бота в config.py:**
 python
 Copy
 BOT_TOKEN = "ваш_токен"
