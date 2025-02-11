@@ -1,6 +1,6 @@
 # KoopAttendanceBot 🤖
 **Бот для учета посещаемости учащихся**  
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org/downloads/)
 [![Aiogram](https://img.shields.io/badge/Aiogram-2.x-green)](https://docs.aiogram.dev/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-5.0%2B-brightgreen)](https://www.mongodb.com/)
 
