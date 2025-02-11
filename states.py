@@ -5,4 +5,4 @@ class Form(StatesGroup):
     waiting_for_confirmation = State()
     waiting_for_student_name = State()
     waiting_for_recipient_response = State()
-    waiting_for_schedule_photo = State()  # Для фото
+    waiting_for_schedule_photo = State()

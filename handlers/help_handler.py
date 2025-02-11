@@ -1,12 +1,12 @@
 from aiogram import Router
 from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command  # Добавьте этот импорт
 from utils import create_keyboard
 
 router = Router()
 
-@router.message(Command("help"))
-async def cmd_help(message: Message, state: FSMContext):
+@router.message(Command("help"))  # Теперь Command импортирован
+async def cmd_help(message: Message):
     help_text = (
         "🤖 **AttendanceTrackerBot**\n\n"
         "Этот бот помогает вести учет посещаемости учащихся и отправлять данные коллегам.\n\n"
@@ -19,10 +19,11 @@ async def cmd_help(message: Message, state: FSMContext):
         "3. **Расписание**: Загрузите изображение с расписанием, и бот отправит его получателю.\n"
         "4. **Инлайн-режим**: Используйте @YourBotName в любом чате для быстрой отправки данных.\n\n"
         "📂 **Логирование**: Все сообщения сохраняются в файл `user_messages.txt`.\n\n"
-        "📞 **Поддержка**: Если возникли вопросы, напишите @Rengoku_crd."
+        "📞 **Поддержка**: Если возникли вопросы, напишите @your_username."
     )
 
     await message.answer(
         help_text,
-        reply_markup=create_keyboard(["Добавить", "Завершить", "Расписание", "/help"])
+        reply_markup=create_keyboard(["Добавить", "Завершить", "Расписание", "/help"]),
+        parse_mode="Markdown"
     )
