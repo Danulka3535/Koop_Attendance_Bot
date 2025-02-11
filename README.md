@@ -2,7 +2,7 @@
 **Бот для учета посещаемости учащихся**  
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org/downloads/)
 [![Aiogram](https://img.shields.io/badge/Aiogram-3.x-green)](https://pypi.org/project/aiogram/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-5.0%2B-brightgreen)](https://www.mongodb.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-5.0%2B-brightgreen)]([https://www.mongodb.com/](https://www.mongodb.com/try/download/community))
 
 Бот помогает преподавателям и администраторам удобно вести учет посещаемости учащихся, отправлять данные коллегам и получать подтверждение операций.
 
