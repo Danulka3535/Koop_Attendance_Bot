@@ -1,7 +1,7 @@
 # KoopAttendanceBot 🤖
 **Бот для учета посещаемости учащихся**  
 [![Python](https://img.shields.io/badge/Python-3.13%2B-blue)](https://www.python.org/downloads/)
-[![Aiogram](https://img.shields.io/badge/Aiogram-2.x-green)](https://docs.aiogram.dev/)
+[![Aiogram](https://img.shields.io/badge/Aiogram-3.x-green)](https://pypi.org/project/aiogram/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-5.0%2B-brightgreen)](https://www.mongodb.com/)
 
 Бот помогает преподавателям и администраторам удобно вести учет посещаемости учащихся, отправлять данные коллегам и получать подтверждение операций.
