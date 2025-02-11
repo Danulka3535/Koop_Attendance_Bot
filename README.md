@@ -29,23 +29,21 @@
    git clone https://github.com/ваш-username/AttendanceTrackerBot.git
    cd AttendanceTrackerBot
 ## **Установите зависимости:**
- 
 Copy
 ```bash
 pip install -r requirements.txt
 ```
 
 ## **Настройте подключение к MongoDB в database.py:**
- 
-python
 Copy
+```bash
 mongo_client = MongoClient("mongodb://localhost:27017/")  # Ваш URI
-
+```
 ## **Укажите токен бота в config.py:**
-python
 Copy
+```bash
 BOT_TOKEN = "ваш_токен"
-
+```
 ### 🖥 Использование
 **Начало работы:**
 **Отправьте команду** */start боту.*
