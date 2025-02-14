@@ -1,5 +1,5 @@
 from database import register_user
-BOT_TOKEN = "7664076869:AAF02jlQCnD7NRVI1v-z9A4uFhIcbClq-bQ"
+BOT_TOKEN = "Your_Bot_Token"
 YOUR_USER_ID = "user_id"
 REGISTERED_USERS = {
     "user1": 123456789,
