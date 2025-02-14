@@ -7,7 +7,8 @@
 Бот помогает преподавателям и администраторам удобно вести учет посещаемости учащихся, отправлять данные коллегам и получать подтверждение операций.
 
 ### **Username бота: ``` @Koop_Attendance_Bot ```**
-QR-Code![image](https://github.com/user-attachments/assets/3f046725-0f30-4ce0-952f-fe7a1f92c0c0) width="400" height="790">
+
+<img src="https://github.com/user-attachments/assets/76b36b05-4ee2-4466-857e-43d90cb6f91f" alt="Пример изображения" width="250" height="280">
 
 ---
 
