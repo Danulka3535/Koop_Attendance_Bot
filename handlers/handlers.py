@@ -5,7 +5,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram import Bot
 from aiogram.fsm.storage.base import StorageKey
 from states import Form
-from database import create_pending_request, get_pending_request, update_pending_request, save_attendance_data
+from database import (
+    create_pending_request, 
+    get_pending_request, 
+    update_pending_request, 
+    save_attendance_data,
+    register_user  # Добавлен импорт
+)
 from utils import check_user_exists, create_keyboard, create_inline_keyboard
 import datetime
 import logging
@@ -14,7 +20,17 @@ router = Router()
 
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
-    await message.answer("Привет! Давайте начнем учет посещаемости.\nКому вы хотите отправить эти данные? Введите username получателя (например, @username):")
+    """Обработчик команды /start с регистрацией пользователя"""
+    # Регистрируем пользователя в базе данных
+    register_user(
+        user_id=message.from_user.id,
+        username=message.from_user.username
+    )
+    
+    await message.answer(
+        "Привет! Давайте начнем учет посещаемости.\n"
+        "Кому вы хотите отправить эти данные? Введите username получателя (например, @username):\n(Можете написать мой @Zxenook)"
+    )
     await state.set_state(Form.waiting_for_recipient_username)
 
 @router.message(Form.waiting_for_recipient_username)
@@ -80,10 +96,10 @@ async def handle_confirmation(
         
         if action == "accept":
             await sender_state.set_state(Form.waiting_for_student_name)
-            await bot.send_message(sender_id, "✅ Введите ФИО учащегося:")
+            await bot.send_message(sender_id, "✅ Введите Дату, Время, Причину отсутствия и ФИО учащегося. Пример:\nДата: 01.01.20__ Время: 00:00 (по желанию)\nФИО: Иванов Иван Иванович\nПричина: не явился на все занятия.")
         else:
             await sender_state.set_state(Form.waiting_for_recipient_username)
-            await bot.send_message(sender_id, "❌ Введите новый username:")
+            await bot.send_message(sender_id, "❌ Пользователь отменил Ваш запрос. Введите новый username:")
             
         await callback.answer()
         await callback.message.delete()
@@ -107,7 +123,7 @@ async def process_student_name(message: Message, state: FSMContext):
 @router.message(Form.waiting_for_add_more)
 async def process_add_more(message: Message, state: FSMContext, bot: Bot):
     if message.text == "Добавить":
-        await message.answer("Введите ФИО следующего учащегося:")
+        await message.answer("Введите Дату, Время, Причину отсутствия и ФИО следующего учащегося:")
         await state.set_state(Form.waiting_for_student_name)
     elif message.text == "Завершить":
         data = await state.get_data()
