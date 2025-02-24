@@ -1,35 +1,17 @@
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from middlewares.message_logger import MessageLoggerMiddleware
 from handlers import router
-from database import init_db
-from config import BOT_TOKEN
+import asyncio
 import logging
 
-# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация хранилища состояний
-storage = MemoryStorage()
+async def main():
+    bot = Bot(token="7664076869:AAF02jlQCnD7NRVI1v-z9A4uFhIcbClq-bQ")  # Замени на свой токен
+    storage = MemoryStorage()
+    dp = Dispatcher(storage=storage)
+    dp.include_router(router)
+    await dp.start_polling(bot)
 
-try:
-    # Проверка подключения к MongoDB
-    init_db()
-    logging.info("Successfully connected to MongoDB")
-except Exception as e:
-    logging.critical(f"MongoDB connection failed: {e}")
-    exit(1)
-
-# Инициализация бота и диспетчера
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(storage=storage)
-
-# Подключение мидлвари
-dp.update.outer_middleware(MessageLoggerMiddleware())
-
-# Подключение роутера
-dp.include_router(router)
-
-# Запуск бота
 if __name__ == "__main__":
-    dp.run_polling(bot)
+    asyncio.run(main())

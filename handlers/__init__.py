@@ -1,4 +1,4 @@
-# handlers/__init__.py
 from .handlers import router
-from utils import create_keyboard, check_user_exists
+from utils import create_inline_keyboard
+
 __all__ = ["router"]
