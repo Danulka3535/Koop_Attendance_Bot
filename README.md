@@ -16,7 +16,7 @@
 ## 🚀 Установка
 
 ### Требования
-- Python 3.8+
+- Python 3.8+ **[Скачать](https://www.python.org/downloads/)**
 - Telegram Bot API Token от **[@BotFather](https://t.me/BotFather)**
 - MongoDB **[MongoDB Community Server](https://www.mongodb.com/try/download/community)**
 
